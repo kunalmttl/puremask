@@ -1,0 +1,6 @@
+{
+  "name": "Background Remover",
+  "description": "A clean, minimalistic background remover that processes images locally in your browser with high accuracy.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
