@@ -59,13 +59,13 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Toast helper
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ message, type });
     toastTimeoutRef.current = setTimeout(() => {
       setToast(null);
     }, 4000);
-  };
+  }, []);
 
   // Clean up Object URLs when they change to prevent memory leaks
   useEffect(() => {
@@ -119,7 +119,7 @@ export default function Home() {
     img.src = url;
 
     showToast('Image uploaded successfully! Press "Remove Background" to convert.', 'success');
-  }, [originalUrl, processedUrl]);
+  }, [originalUrl, processedUrl, showToast]);
 
   // Handle drop events
   const handleDrag = (e: React.DragEvent) => {
@@ -223,7 +223,7 @@ export default function Home() {
     } finally {
       setIsProcessing(false);
     }
-  }, [originalFile, accuracyMode, processedUrl]);
+  }, [originalFile, accuracyMode, processedUrl, showToast]);
 
   // Helper to draw background color behind the image and export/copy
   const getOutputBlobWithBg = useCallback(async (): Promise<Blob> => {
@@ -284,7 +284,7 @@ export default function Home() {
       console.error('Failed to copy image:', err);
       showToast('Direct copying is restricted in this browser context. Please download the file or right-click to copy.', 'error');
     }
-  }, [processedBlob, getOutputBlobWithBg]);
+  }, [processedBlob, getOutputBlobWithBg, showToast]);
 
   // Direct Download Handler
   const handleDownload = async () => {
@@ -320,7 +320,7 @@ export default function Home() {
     }
   };
 
-  // Bind keyboard shortcuts: Ctrl + C to copy processed image, Enter to trigger background removal
+  // Bind keyboard shortcuts: Ctrl + C to copy processed image, Enter to trigger background removal, Tab to cycle modes
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const active = document.activeElement;
@@ -349,11 +349,29 @@ export default function Home() {
           handleRemoveBackground();
         }
       }
+
+      // Bind Tab to cycle between accuracy modes
+      if (e.key === 'Tab') {
+        if (isInput) {
+          return;
+        }
+        e.preventDefault();
+        setAccuracyMode((prev) => {
+          const next = prev === 'isnet' ? 'isnet_quint8' : 'isnet';
+          showToast(
+            next === 'isnet'
+              ? 'Switched to Ultra Accurate mode (U2Net Full Model)'
+              : 'Switched to Standard mode (Fast Quantized)',
+            'info'
+          );
+          return next;
+        });
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [processedBlob, handleCopy, originalFile, isProcessing, handleRemoveBackground]);
+  }, [processedBlob, handleCopy, originalFile, isProcessing, handleRemoveBackground, showToast]);
 
   // Reset Everything
   const handleClear = () => {
@@ -401,14 +419,32 @@ export default function Home() {
         {/* Header section with Sophisticated Dark brand and elegant spacing */}
         <header id="header-container" className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-white/5 pb-8">
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full border border-white flex items-center justify-center">
-                <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
+            <div className="flex flex-wrap items-center gap-3 md:gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full border border-white flex items-center justify-center">
+                  <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
+                </div>
+                <span className="font-serif italic text-xl tracking-tight text-white select-none">PureMask.</span>
+                <span className="text-[10px] uppercase tracking-widest font-mono bg-white/10 text-white/70 px-2 py-0.5 rounded-full font-semibold">
+                  Local AI
+                </span>
               </div>
-              <span className="font-serif italic text-xl tracking-tight text-white select-none">PureMask.</span>
-              <span className="text-[10px] uppercase tracking-widest font-mono bg-white/10 text-white/70 px-2 py-0.5 rounded-full font-semibold">
-                Local AI
-              </span>
+
+              {/* Elegant Shortcut indicators */}
+              <div className="hidden lg:flex items-center gap-4 text-[10px] uppercase tracking-[0.2em] text-white/30 font-mono ml-2 border-l border-white/10 pl-4 select-none">
+                <div className="flex items-center gap-1">
+                  <span>Ctrl+V</span> <span className="text-white/20 ml-0.5">Paste</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span>Tab</span> <span className="text-white/20 ml-0.5">Switch</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span>Enter</span> <span className="text-white/20 ml-0.5">Start</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span>Ctrl+C</span> <span className="text-white/20 ml-0.5">Copy</span>
+                </div>
+              </div>
             </div>
             <p className="text-white/40 text-xs leading-relaxed max-w-md">
               High-accuracy pixel segmentation running 100% locally in your browser. Paste, convert, and copy instantly.
